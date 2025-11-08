@@ -1,0 +1,60 @@
+
+services:
+  catalog-server:
+    image: catalog-microservice
+    build:
+      context: .
+      target: production
+    volumes:
+      - ./main/catalog-microservice:/app/main/catalog-microservice:ro
+      - ./main/nginx:/app/main/nginx:ro
+      - ./main/catalog-microservice/database.db:/app/database.db:rw
+    environment:
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+      endpoint_mode: dnsrr
+order-server:
+    image: order-microservice
+    build:
+      context: .
+      target: production1
+    volumes:
+      - ./main/order-microservice:/app/main/order-microservice:ro
+      - ./main/nginx:/app/main/nginx:ro
+    environment:
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+      endpoint_mode: dnsrr
+
+client:
+    image: client-microservice
+    build:
+      context: .
+    volumes:
+      - ./main/client-microservice:/app/main/client-microservice:ro
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+      endpoint_mode: dnsrr
+nginx:
+    image: nginx:stable-alpine
+    ports:
+      - '8083:80'
+    volumes:
+      - ./main/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - catalog-server
+      - order-server
+      - client
+redis:
+    image: redis
