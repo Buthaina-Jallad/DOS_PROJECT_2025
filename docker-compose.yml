@@ -10,6 +10,7 @@ services:
       - ./catalog_data:/data
     expose:
       - "5000"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 10s
@@ -25,9 +26,11 @@ services:
     volumes:
       - ./order_data:/data
     depends_on:
-      - catalog
+      catalog:
+        condition: service_healthy
     expose:
       - "5001"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 10s
@@ -41,10 +44,13 @@ services:
       - CATALOG_URL=http://catalog:5000
       - ORDER_URL=http://order:5001
     depends_on:
-      - catalog
-      - order
+      catalog:
+        condition: service_healthy
+      order:
+        condition: service_healthy
     expose:
       - "5002"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
       interval: 10s
@@ -59,10 +65,22 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - client
-      - order
-      - catalog
+      client:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      # nginx:alpine غالبًا فيه wget، فبنستخدمه
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-volumes:
-  catalog_data:
-  order_data:
+# ملاحظة: بلوك volumes تحت مش مستخدم لأنك عامل bind mounts (./catalog_data و ./order_data)
+# إذا حاب تعملها Named volumes بدل bind mounts، احكيلي وببدّلها لك.
+# volumes:
+#   catalog_data:
+#   order_data:

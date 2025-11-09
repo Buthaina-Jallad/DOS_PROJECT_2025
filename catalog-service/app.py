@@ -49,10 +49,10 @@ def init_db():
     con.executemany(
         "INSERT OR IGNORE INTO books(id, title, topic, price, quantity) VALUES(?,?,?,?,?)",
         [
-            (1, "How to finish Project 3 on time", "distributed systems", 19.99, 8),
-            (2, "Why theory classes are so hard.", "distributed systems", 24.90, 12),
-            (3, "Spring in the Pioneer Valley", "distributed systems", 17.50, 5),
-            (4, "Notes on Practical Microservices", "microservices", 29.00, 10),
+            (1, "How to get a good grade in DOS in 40 minutes a day.", "distributed systems", 19.99, 8),
+            (2, "RPCs for Noobs.", "distributed systems", 24.90, 12),
+            (3, "Xen and the Art of Surviving Undergraduate School.", "undergraduate school", 17.50, 5),
+            (4, "Cooking for the Impatient Undergrad.", "undergraduate school", 29.00, 10),
         ],
     )
     con.commit()
