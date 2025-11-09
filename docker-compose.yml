@@ -1,60 +1,68 @@
+version: '3.8'
 
 services:
-  catalog-server:
-    image: catalog-microservice
-    build:
-      context: .
-      target: production
-    volumes:
-      - ./main/catalog-microservice:/app/main/catalog-microservice:ro
-      - ./main/nginx:/app/main/nginx:ro
-      - ./main/catalog-microservice/database.db:/app/database.db:rw
+  catalog:
+    build: ./catalog-service
+    container_name: catalog
     environment:
-      - NODE_ENV=production
-    deploy:
-      replicas: 2
-      update_config:
-        parallelism: 2
-        delay: 10s
-      endpoint_mode: dnsrr
-order-server:
-    image: order-microservice
-    build:
-      context: .
-      target: production1
+      - DB_PATH=/data/catalog.db
     volumes:
-      - ./main/order-microservice:/app/main/order-microservice:ro
-      - ./main/nginx:/app/main/nginx:ro
-    environment:
-      - NODE_ENV=production
-    deploy:
-      replicas: 2
-      update_config:
-        parallelism: 2
-        delay: 10s
-      endpoint_mode: dnsrr
+      - ./catalog_data:/data
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-client:
-    image: client-microservice
-    build:
-      context: .
+  order:
+    build: ./order-service
+    container_name: order
+    environment:
+      - DB_PATH=/data/orders.db
+      - CATALOG_URL=http://catalog:5000
     volumes:
-      - ./main/client-microservice:/app/main/client-microservice:ro
-    deploy:
-      replicas: 2
-      update_config:
-        parallelism: 2
-        delay: 10s
-      endpoint_mode: dnsrr
-nginx:
-    image: nginx:stable-alpine
-    ports:
-      - '8080:80'
-    volumes:
-      - ./main/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./order_data:/data
     depends_on:
-      - catalog-server
-      - order-server
+      - catalog
+    expose:
+      - "5001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  client:
+    build: ./client-service
+    container_name: client
+    environment:
+      - CATALOG_URL=http://catalog:5000
+      - ORDER_URL=http://order:5001
+    depends_on:
+      - catalog
+      - order
+    expose:
+      - "5002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
       - client
-redis:
-    image: redis
+      - order
+      - catalog
+
+volumes:
+  catalog_data:
+  order_data:
