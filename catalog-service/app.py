@@ -71,18 +71,40 @@ def health():
 # ---------------------------
 # REST Endpoints
 # ---------------------------
+# ---------------------------
+# Query-by-subject (يدعم الطريقتين)
+# ---------------------------
 @app.get("/search")
-def search():
-    topic = (request.args.get("topic") or "").strip().lower()
+@app.get("/search/<string:topic>")
+def search(topic=None):
     con = get_db()
-    if topic:
+
+    # نحاول نقرأ الـ topic من الـ path أو من الـ query parameter
+    if not topic:
+        topic = (request.args.get("topic") or "").strip().lower()
+    else:
+        topic = topic.strip().lower()
+
+    # إذا ما تم تحديد topic، رجع كل الكتب
+    if not topic:
+        rows = con.execute("SELECT id, title FROM books").fetchall()
+    else:
         rows = con.execute(
             "SELECT id, title FROM books WHERE lower(topic) LIKE ?",
             (f"%{topic}%",),
         ).fetchall()
-    else:
-        rows = con.execute("SELECT id, title FROM books").fetchall()
-    return jsonify({"items": [dict(r) for r in rows]}), 200
+
+    # ننشئ شكلين من الإخراج (list + dict)
+    items_list = [dict(r) for r in rows]
+    items_dict = {r["title"].strip(): r["id"] for r in rows}
+
+    # نرجّع الاثنين بنفس الوقت للتوضيح
+    return jsonify({
+        "query_param_form": "/search?topic=<topic>",
+        "path_param_form": "/search/<topic>",
+        "items_list": items_list,   # الشكل القديم (قائمة)
+        "items_dict": items_dict    # الشكل الجديد (قاموس)
+    }), 200
 
 @app.get("/info/<int:item_id>")
 def info(item_id: int):
