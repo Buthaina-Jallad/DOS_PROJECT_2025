@@ -74,12 +74,15 @@ def health():
 # ---------------------------
 # Query-by-subject (يدعم الطريقتين)
 # ---------------------------
+# ---------------------------
+# Query-by-subject (يدعم الطريقتين بنفس الوقت)
+# ---------------------------
 @app.get("/search")
 @app.get("/search/<string:topic>")
 def search(topic=None):
     con = get_db()
 
-    # نحاول نقرأ الـ topic من الـ path أو من الـ query parameter
+    # نقرأ الـ topic من الـ path أو من الـ query
     if not topic:
         topic = (request.args.get("topic") or "").strip().lower()
     else:
@@ -94,17 +97,11 @@ def search(topic=None):
             (f"%{topic}%",),
         ).fetchall()
 
-    # ننشئ شكلين من الإخراج (list + dict)
-    items_list = [dict(r) for r in rows]
+    # نحول النتائج لقاموس (title → id)
     items_dict = {r["title"].strip(): r["id"] for r in rows}
 
-    # نرجّع الاثنين بنفس الوقت للتوضيح
-    return jsonify({
-        "query_param_form": "/search?topic=<topic>",
-        "path_param_form": "/search/<topic>",
-        "items_list": items_list,   # الشكل القديم (قائمة)
-        "items_dict": items_dict    # الشكل الجديد (قاموس)
-    }), 200
+    # نرجع الشكل المطلوب فقط
+    return jsonify({"items": items_dict}), 200
 
 @app.get("/info/<int:item_id>")
 def info(item_id: int):
