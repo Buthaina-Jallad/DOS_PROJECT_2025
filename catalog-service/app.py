@@ -124,6 +124,48 @@ def decrement(item_id: int):
 
     return jsonify({"ok": True, "item_id": item_id, "remaining": new_q}), 200
 
+
+# ---------------------------
+# ✅ Update Operation (new)
+# يسمح بتعديل السعر أو زيادة/نقص الكمية
+# ---------------------------
+@app.post("/update/<int:item_id>")
+def update_item(item_id: int):
+    data = request.get_json(force=True)
+    fields = []
+    values = []
+
+    # تعديل السعر
+    if "price" in data:
+        fields.append("price = ?")
+        values.append(float(data["price"]))
+
+    # تعديل الكمية (موجب = زيادة / سالب = إنقاص)
+    if "quantity" in data:
+        fields.append("quantity = quantity + ?")
+        values.append(int(data["quantity"]))
+
+    if not fields:
+        return jsonify({"error": "no_valid_fields"}), 400
+
+    values.append(item_id)
+    con = get_db()
+    con.execute(f"UPDATE books SET {', '.join(fields)} WHERE id = ?", values)
+    con.commit()
+
+    updated_row = con.execute(
+        "SELECT id, title, price, quantity FROM books WHERE id=?",
+        (item_id,)
+    ).fetchone()
+
+    return jsonify({
+        "ok": True,
+        "item_id": item_id,
+        "updated_fields": fields,
+        "new_data": dict(updated_row)
+    }), 200
+
+
 # للتشغيل المحلي (خارج Docker/Gunicorn)
 if __name__ == "_main_":
     with app.app_context():
