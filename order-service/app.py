@@ -2,7 +2,7 @@
 import os
 import sqlite3
 import requests
-from flask import Flask, jsonify, g
+from Flask import Flask, jsonify, g , request
 
 # مسار قاعدة الطلبات
 DB_PATH = os.environ.get("DB_PATH", "/data/orders.db")
@@ -45,14 +45,24 @@ def close_db(exc):
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "db_exists": os.path.exists(DB_PATH)}), 200
-
+# ---------------------------
+# Purchase (يدعم الطريقتين)
+# ---------------------------
+@app.post("/purchase")
 @app.post("/purchase/<int:item_id>")
-def purchase(item_id: int):
+def purchase(item_id=None):
     """
     1) يطلب من الكتالوج حجز/تنقيص الكمية عبر /decrement/<id>
     2) إذا نجح، يسجل الطلب في orders.db
     3) يرجّع JSON واضح دائماً
     """
+
+    # (0) السماح بالطريقتين: /purchase/<id> أو /purchase?id=<id>
+    if not item_id:
+        item_id = request.args.get("id", type=int)
+    if not item_id:
+        return jsonify({"ok": False, "error": "no_item_id_provided"}), 400
+
     # (1) حجز من الكتالوج
     try:
         r = requests.post(f"{CATALOG_URL}/decrement/{item_id}", timeout=5)
@@ -77,7 +87,6 @@ def purchase(item_id: int):
         con.execute("INSERT INTO orders(item_id) VALUES (?)", (item_id,))
         con.commit()
     except Exception as e:
-        # فشل التسجيل بعد الحجز — بإمكانك لاحقاً تعمل “تعويض” (compensation) إذا بدك
         return jsonify({"ok": False, "error": "db_insert_failed", "detail": str(e)}), 500
 
     # (3) نجاح
