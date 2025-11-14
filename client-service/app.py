@@ -67,34 +67,44 @@ INDEX_HTML = """
     </form>
     <div id="results" class="grid"></div>
   </div>
+<script>
+  async function doSearch(){
+    const topic = document.getElementById('topic').value;
+    const r = await fetch('/api/search?topic=' + encodeURIComponent(topic));
+    const data = await r.json();
+    const box = document.getElementById('results');
+    box.innerHTML = '';
 
-  <script>
-    async function doSearch(){
-      const topic = document.getElementById('topic').value;
-      const r = await fetch('/api/search?topic=' + encodeURIComponent(topic));
-      const data = await r.json();
-      const box = document.getElementById('results');
-      box.innerHTML = '';
-      (data.items||[]).forEach(item => {
-        const el = document.createElement('div');
-        el.className = 'card';
-        el.innerHTML = '<b>#'+item.id+'</b> ' + item.title +
-          '<div><button onclick="info('+item.id+')">Info</button>' +
-          '<button onclick="buy('+item.id+')">Buy</button></div>';
-        box.appendChild(el);
-      });
-    }
-    async function info(id){
-      const r = await fetch('/api/info/' + id);
-      const data = await r.json();
-      alert(JSON.stringify(data, null, 2));
-    }
-    async function buy(id){
-      const r = await fetch('/api/buy/' + id, {method:'POST'});
-      const data = await r.json();
-      alert(JSON.stringify(data, null, 2));
-    }
-  </script>
+    // 🔧 دعم كلا الشكلين (object أو array)
+    const itemsArray = Array.isArray(data.items)
+      ? data.items
+      : Object.entries(data.items || {}).map(([title, id]) => ({ title, id }));
+
+    itemsArray.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <b>#${item.id}</b> ${item.title}
+        <div>
+          <button onclick="info(${item.id})">Info</button>
+          <button onclick="buy(${item.id})">Buy</button>
+        </div>`;
+      box.appendChild(el);
+    });
+  }
+
+  async function info(id){
+    const r = await fetch('/api/info/' + id);
+    const data = await r.json();
+    alert(JSON.stringify(data, null, 2));
+  }
+
+  async function buy(id){
+    const r = await fetch('/api/buy/' + id, {method:'POST'});
+    const data = await r.json();
+    alert(JSON.stringify(data, null, 2));
+  }
+</script>
 </body>
 </html>
 """

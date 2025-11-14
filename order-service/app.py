@@ -2,7 +2,7 @@
 import os
 import sqlite3
 import requests
-from Flask import Flask, jsonify, g , request
+from flask import Flask, jsonify, g , request
 
 # مسار قاعدة الطلبات
 DB_PATH = os.environ.get("DB_PATH", "/data/orders.db")
