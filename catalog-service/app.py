@@ -153,18 +153,25 @@ def decrement(item_id=None):
 # ✅ Update Operation (new)
 # يسمح بتعديل السعر أو زيادة/نقص الكمية
 # ---------------------------
+# ---------------------------
+# Update (supports both forms)
+# ---------------------------
+@app.post("/update")
 @app.post("/update/<int:item_id>")
-def update_item(item_id: int):
+def update_item(item_id=None):
     data = request.get_json(force=True)
-    fields = []
-    values = []
+    if not item_id:
+        item_id = request.args.get("id", type=int)
 
-    # تعديل السعر
+    if not item_id:
+        return jsonify({"error": "no_item_id_provided"}), 400
+
+    fields, values = [], []
+
     if "price" in data:
         fields.append("price = ?")
         values.append(float(data["price"]))
 
-    # تعديل الكمية (موجب = زيادة / سالب = إنقاص)
     if "quantity" in data:
         fields.append("quantity = quantity + ?")
         values.append(int(data["quantity"]))
@@ -182,12 +189,7 @@ def update_item(item_id: int):
         (item_id,)
     ).fetchone()
 
-    return jsonify({
-        "ok": True,
-        "item_id": item_id,
-        "updated_fields": fields,
-        "new_data": dict(updated_row)
-    }), 200
+    return jsonify({"ok": True, "item_id": item_id, "new_data": dict(updated_row)}), 200
 
 
 # للتشغيل المحلي (خارج Docker/Gunicorn)
