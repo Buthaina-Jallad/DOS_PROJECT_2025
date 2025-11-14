@@ -123,33 +123,30 @@ def info(item_id=None):
 
 
 # يُستدعى من order-service لتقليل المخزون
+# ---------------------------
+# Decrement (supports both forms)
+# ---------------------------
+@app.post("/decrement")
 @app.post("/decrement/<int:item_id>")
-def decrement(item_id: int):
+def decrement(item_id=None):
     con = get_db()
+    if not item_id:
+        item_id = request.args.get("id", type=int)
+    if not item_id:
+        return jsonify({"error": "no_item_id_provided"}), 400
 
-    # نتأكد موجود ومش صفر
     row = con.execute("SELECT quantity FROM books WHERE id=?", (item_id,)).fetchone()
     if not row:
         return jsonify({"error": "not_found"}), 404
     if row["quantity"] <= 0:
         return jsonify({"error": "out_of_stock"}), 400
 
-    # إنقاص ذري + حماية من السباق (WHERE quantity > 0)
-    cur = con.execute(
-        "UPDATE books SET quantity = quantity - 1 WHERE id=? AND quantity > 0",
-        (item_id,),
-    )
+    con.execute("UPDATE books SET quantity = quantity - 1 WHERE id=? AND quantity > 0", (item_id,))
     con.commit()
-
-    if cur.rowcount == 0:
-        # صار صفر بين القراءة والتحديث
-        return jsonify({"error": "out_of_stock"}), 400
-
-    new_q = con.execute(
-        "SELECT quantity FROM books WHERE id=?", (item_id,)
-    ).fetchone()["quantity"]
+    new_q = con.execute("SELECT quantity FROM books WHERE id=?", (item_id,)).fetchone()["quantity"]
 
     return jsonify({"ok": True, "item_id": item_id, "remaining": new_q}), 200
+
 
 
 # ---------------------------
