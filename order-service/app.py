@@ -96,7 +96,7 @@ def purchase(item_id=None):
 with app.app_context():
     init_db()
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     # تشغيل محلي (خارج Docker)
     with app.app_context():
         init_db()

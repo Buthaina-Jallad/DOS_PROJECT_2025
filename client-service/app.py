@@ -113,5 +113,5 @@ INDEX_HTML = """
 def index():
     return render_template_string(INDEX_HTML)
 
-if __name__ == "_main":  # <-- وهنا كمان نفس الشي، لازم __main_
+if __name__ == "__main__":  # <-- وهنا كمان نفس الشي، لازم __main_
     app.run(host="0.0.0.0", port=5002)
