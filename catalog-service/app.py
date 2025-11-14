@@ -103,9 +103,16 @@ def search(topic=None):
     # نرجع الشكل المطلوب فقط
     return jsonify({"items": items_dict}), 200
 
+@app.get("/info")
 @app.get("/info/<int:item_id>")
-def info(item_id: int):
+def info(item_id=None):
     con = get_db()
+    if not item_id:
+        item_id = request.args.get("id", type=int)
+
+    if not item_id:
+        return jsonify({"error": "no_item_id_provided"}), 400
+
     row = con.execute(
         "SELECT id, title, price, quantity, topic FROM books WHERE id=?",
         (item_id,),
@@ -113,6 +120,7 @@ def info(item_id: int):
     if not row:
         return jsonify({"error": "not_found"}), 404
     return jsonify(dict(row)), 200
+
 
 # يُستدعى من order-service لتقليل المخزون
 @app.post("/decrement/<int:item_id>")
